@@ -1,42 +1,39 @@
 const express = require("express");
-const { authors, posts } = require("../db/memory");
+const postsService = require("../services/posts.service");
+const authorsService = require("../services/authors.service");
 
 const router = express.Router();
 
-let nextId = posts.length + 1;
-
 // GET /posts → listar todos
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
+  const posts = await postsService.getAll();
   res.status(200).json(posts);
 });
 
-// GET /posts/author/:authorId → posts de un author con sus datos (el "JOIN")
-router.get("/author/:authorId", (req, res) => {
+// GET /posts/author/:authorId → posts de un author con sus datos (JOIN)
+router.get("/author/:authorId", async (req, res) => {
   const authorId = Number(req.params.authorId);
-  if (Number.isNaN(authorId)) {
-    return res.status(400).json({ error: "El authorId debe ser un número" });
+  if (!Number.isInteger(authorId)) {
+    return res.status(400).json({ error: "El authorId debe ser un número entero" });
   }
 
-  const author = authors.find((a) => a.id === authorId);
+  const author = await authorsService.getById(authorId);
   if (!author) {
     return res.status(404).json({ error: "Author no encontrado" });
   }
 
-  const authorPosts = posts
-    .filter((p) => p.author_id === authorId)
-    .map((p) => ({ ...p, author_name: author.name, author_email: author.email }));
-
-  res.status(200).json(authorPosts);
+  const posts = await postsService.getByAuthorId(authorId);
+  res.status(200).json(posts);
 });
 
 // GET /posts/:id → detalle de uno
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ error: "El id debe ser un número" });
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "El id debe ser un número entero" });
   }
 
-  const post = posts.find((p) => p.id === id);
+  const post = await postsService.getById(id);
   if (!post) {
     return res.status(404).json({ error: "Post no encontrado" });
   }
@@ -45,35 +42,31 @@ router.get("/:id", (req, res) => {
 });
 
 // POST /posts → crear uno
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const { title, content, author_id, published } = req.body || {};
-
   if (!title || !content || !author_id) {
     return res.status(400).json({ error: "title, content y author_id son obligatorios" });
   }
 
-  const authorExists = authors.some((a) => a.id === Number(author_id));
-  if (!authorExists) {
+  const authorId = Number(author_id);
+  if (!Number.isInteger(authorId)) {
+    return res.status(400).json({ error: "El author_id debe ser un número entero" });
+  }
+
+  const author = await authorsService.getById(authorId);
+  if (!author) {
     return res.status(400).json({ error: "El author_id no corresponde a ningún author" });
   }
 
-  const newPost = {
-    id: nextId++,
-    title,
-    content,
-    author_id: Number(author_id),
-    published: published === true,
-  };
-  posts.push(newPost);
-
+  const newPost = await postsService.create(title, content, authorId, published === true);
   res.status(201).json(newPost);
 });
 
 // PUT /posts/:id → reemplazar los datos de uno
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ error: "El id debe ser un número" });
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "El id debe ser un número entero" });
   }
 
   const { title, content, author_id, published } = req.body || {};
@@ -81,39 +74,37 @@ router.put("/:id", (req, res) => {
     return res.status(400).json({ error: "title, content y author_id son obligatorios" });
   }
 
-  const index = posts.findIndex((p) => p.id === id);
-  if (index === -1) {
+  const authorId = Number(author_id);
+  if (!Number.isInteger(authorId)) {
+    return res.status(400).json({ error: "El author_id debe ser un número entero" });
+  }
+
+  const post = await postsService.getById(id);
+  if (!post) {
     return res.status(404).json({ error: "Post no encontrado" });
   }
 
-  const authorExists = authors.some((a) => a.id === Number(author_id));
-  if (!authorExists) {
+  const author = await authorsService.getById(authorId);
+  if (!author) {
     return res.status(400).json({ error: "El author_id no corresponde a ningún author" });
   }
 
-  posts[index] = {
-    id,
-    title,
-    content,
-    author_id: Number(author_id),
-    published: published === true,
-  };
-  res.status(200).json(posts[index]);
+  const updated = await postsService.update(id, title, content, authorId, published === true);
+  res.status(200).json(updated);
 });
 
 // DELETE /posts/:id → borrar uno
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ error: "El id debe ser un número" });
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "El id debe ser un número entero" });
   }
 
-  const index = posts.findIndex((p) => p.id === id);
-  if (index === -1) {
+  const deleted = await postsService.remove(id);
+  if (!deleted) {
     return res.status(404).json({ error: "Post no encontrado" });
   }
 
-  posts.splice(index, 1);
   res.status(204).send();
 });
 
