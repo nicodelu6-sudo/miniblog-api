@@ -1,0 +1,434 @@
+openapi: 3.1.1
+info:
+  title: MiniBlog API
+  version: 1.0.0
+  description: |
+    API REST para gestionar authors y posts del MiniBlog (Proyecto Integrador M2 de Henry).
+
+    Todos los errores responden JSON con la forma `{ "error": "mensaje" }`.
+    Además de los errores de cada endpoint, en cualquier ruta puede pasar:
+    - Ruta inexistente → 404 "Ruta no encontrada"
+    - Body con JSON mal escrito → 400 "El body no es un JSON válido"
+    - Error inesperado → 500 "Error interno del servidor"
+
+servers:
+  - url: http://localhost:3000
+    description: Local
+  - url: https://miniblog-api-production-ac73.up.railway.app
+    description: Producción (Railway)
+
+tags:
+  - name: Authors
+  - name: Posts
+
+paths:
+  /health:
+    get:
+      summary: Ver si la API está prendida
+      responses:
+        '200':
+          description: La API responde
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /authors:
+    get:
+      summary: Listar todos los authors
+      tags:
+        - Authors
+      responses:
+        '200':
+          description: Lista de authors (ordenada por id)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Author'
+
+    post:
+      summary: Crear un author
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorInput'
+      responses:
+        '201':
+          description: Author creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: Faltan name o email, o ya existe un author con ese email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /authors/{id}:
+    get:
+      summary: Obtener un author por id
+      tags:
+        - Authors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Author encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: El id no es un número entero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Author no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Reemplazar los datos de un author
+      description: Reemplaza el author completo. Si no se manda bio, queda en null.
+      tags:
+        - Authors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorInput'
+      responses:
+        '200':
+          description: Author actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: El id no es entero, faltan name o email, o el email ya es de otro author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Author no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar un author (y sus posts)
+      tags:
+        - Authors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Author eliminado (sin body). Sus posts se borran por ON DELETE CASCADE
+        '400':
+          description: El id no es un número entero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Author no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts:
+    get:
+      summary: Listar todos los posts
+      tags:
+        - Posts
+      responses:
+        '200':
+          description: Lista de posts (ordenada por id)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+
+    post:
+      summary: Crear un post
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostInput'
+      responses:
+        '201':
+          description: Post creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Faltan title, content o author_id, el author_id no es entero, o no existe ese author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/author/{authorId}:
+    get:
+      summary: Listar los posts de un author, con los datos del author (JOIN)
+      tags:
+        - Posts
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Posts del author (array vacío si no tiene posts)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PostWithAuthor'
+        '400':
+          description: El authorId no es un número entero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Author no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{id}:
+    get:
+      summary: Obtener un post por id
+      tags:
+        - Posts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: El id no es un número entero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Reemplazar los datos de un post
+      description: Reemplaza el post completo. Si no se manda published, queda en false.
+      tags:
+        - Posts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostInput'
+      responses:
+        '200':
+          description: Post actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: El id o el author_id no son enteros, faltan campos, o no existe ese author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar un post
+      tags:
+        - Posts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Post eliminado (sin body)
+        '400':
+          description: El id no es un número entero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        bio:
+          type: string
+          description: Puede ser null
+        created_at:
+          type: string
+          format: date-time
+
+    AuthorInput:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Tiene que ser único
+        bio:
+          type: string
+          description: Opcional. Si no se manda, queda en null
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: integer
+        published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PostInput:
+      type: object
+      required:
+        - title
+        - content
+        - author_id
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: integer
+          description: Tiene que ser el id de un author existente
+        published:
+          type: boolean
+          description: Opcional. Si no se manda, queda en false
+
+    PostWithAuthor:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: integer
+        published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        author_name:
+          type: string
+        author_email:
+          type: string
+          format: email
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
