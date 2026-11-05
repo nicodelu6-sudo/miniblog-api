@@ -69,3 +69,13 @@
 - Usé el archivo tal cual y lo revisé en Swagger Editor.
 - Lo abrí en `editor-next.swagger.io` y no en `editor.swagger.io`, porque la versión vieja no lee OpenAPI 3.1.
 
+## Etapa 9 · README y cierre
+
+**Qué pedí:** Ayuda para armar el README con lo que pide la consigna y revisar el proyecto contra el entregable antes de entregar.
+
+**Qué me devolvió:** Un borrador del `README.md` (descripción, endpoints, ejemplos, pasos para correr en local, tests, cómo ver el OpenAPI, guía de deploy en Railway con variables, URL interna y pública, y uso de IA) y una revisión del repo contra el entregable.
+
+**Qué usé o cambié:**
+- Antes de poner los ejemplos en el README los probé en Postman contra la URL de Railway: `/health`, `/authors` y una ruta inexistente (404 en JSON).
+- Cambié la redacción de la sección "Uso de IA" para que refleje mejor cómo usé la herramienta.
+
